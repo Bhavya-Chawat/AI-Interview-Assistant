@@ -234,7 +234,7 @@ export default function Profile() {
       <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-50 dark:from-surface-900 dark:via-surface-950 dark:to-surface-900 flex items-center justify-center">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <LoadingSpinner size="full" className="text-primary-500" />
+            <LoadingSpinner size="xl" className="text-primary-500" />
             {/* Center icon */}
             <div className="absolute inset-0 flex items-center justify-center">
               <User className="w-7 h-7 text-primary-500" />
