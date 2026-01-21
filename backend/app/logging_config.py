@@ -106,7 +106,13 @@ LOGGING_CONFIG = {
             "level": "INFO",
             "handlers": ["console"],
             "propagate": False
-        }
+        },
+        # Suppress noisy libraries
+        "httpcore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "httpx": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "hpack": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "watchfiles": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "fsspec": {"level": "WARNING", "handlers": ["console"], "propagate": False}
     },
     "root": {
         "level": "DEBUG" if settings.debug else "INFO",

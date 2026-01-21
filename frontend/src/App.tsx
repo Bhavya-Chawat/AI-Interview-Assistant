@@ -2021,6 +2021,8 @@ function AppContent() {
                       <CustomUpload
                         onQuestionsLoaded={handleQuestionsLoaded}
                         onCancel={() => setShowCustomUploadModal(false)}
+                        userId={user?.id || ""}
+                        onSuccess={() => setShowCustomUploadModal(false)}
                       />
                     </div>
                   </div>

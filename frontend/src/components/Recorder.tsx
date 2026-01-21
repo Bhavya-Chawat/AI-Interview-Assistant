@@ -19,6 +19,7 @@ import {
   Circle,
   Eye,
   Keyboard,
+  Volume2,
 } from "lucide-react";
 
 // TypeScript declarations for Web Speech API
@@ -450,6 +451,29 @@ function Recorder({
   const fullTranscript = transcript + interimTranscript;
   const wordCount = transcript.split(/\s+/).filter((w) => w).length;
 
+  // Speech Synthesis
+  const speakQuestion = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Stop any current speech
+      const utterance = new SpeechSynthesisUtterance(question.question);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      toast.error("Text-to-speech not supported in this browser");
+    }
+  };
+
+  useEffect(() => {
+    // Stop speech when component unmounts
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   return (
     <div className="recorder-fullscreen">
       {/* Header Bar */}
@@ -653,7 +677,16 @@ function Recorder({
           <div className="column-body">
             {/* Question Display */}
             <div className="question-card">
-              <h4>Interview Question</h4>
+              <div className="flex justify-between items-start mb-2">
+                <h4>Interview Question</h4>
+                <button 
+                  onClick={speakQuestion}
+                  className="p-1.5 rounded-full hover:bg-stone-100 dark:hover:bg-surface-700 text-stone-500 dark:text-surface-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
+                  title="Read Question Aloud"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
               <p className="question-text">{question.question}</p>
               {question.keywords && question.keywords.length > 0 && (
                 <div className="keywords-row">
@@ -798,6 +831,25 @@ function Recorder({
                 <Star className="w-4 h-4 inline mr-2 text-yellow-500" />
                 Use the STAR Method
               </h4>
+<style>{`
+  /* Hide scrollbars for all recorder columns and scrollable areas */
+  .recorder-column .column-body,
+  .transcript-content,
+  .keywords-list,
+  .video-container,
+  .space-y-1\\.5 {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  .recorder-column .column-body::-webkit-scrollbar,
+  .transcript-content::-webkit-scrollbar,
+  .keywords-list::-webkit-scrollbar,
+  .video-container::-webkit-scrollbar,
+  .space-y-1\\.5::-webkit-scrollbar {
+    display: none;
+  }
+`}</style>
               <ul className="tip-list">
                 <li>
                   <strong>S</strong>ituation - Set the scene

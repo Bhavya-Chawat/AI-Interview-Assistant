@@ -28,6 +28,10 @@ from app.models.db import init_db
 from app.services.storage_service import init_storage_buckets
 from app.logging_config import get_logger
 
+# Suppress warnings from google.generativeai
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
+
 logger = get_logger(__name__)
 
 

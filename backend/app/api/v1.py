@@ -1583,7 +1583,8 @@ async def upload_custom_questions_to_db(
                 "success": True,
                 "message": f"Successfully uploaded {len(inserted_ids)} questions to database",
                 "count": len(inserted_ids),
-                "question_ids": inserted_ids
+                "question_ids": inserted_ids,
+                "questions": result.data
             }
         else:
             raise HTTPException(status_code=500, detail="Failed to insert questions to database")

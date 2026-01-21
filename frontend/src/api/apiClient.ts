@@ -952,4 +952,31 @@ export const validateCustomQuestions = async (
   }
 
   return response.json();
+  return response.json();
+};
+
+/**
+ * Upload custom questions to the database (permanent storage).
+ */
+export const uploadCustomQuestionsToDB = async (
+  file: File,
+  userId: string
+): Promise<{ success: boolean; count: number; question_ids: number[]; questions: Question[] }> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("user_id", userId);
+
+  const authHeaders = await getAuthHeaders(true);
+  const response = await fetch(`${API_BASE_URL}/questions/upload_custom`, {
+    method: "POST",
+    headers: authHeaders,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to upload custom questions to DB");
+  }
+
+  return response.json();
 };

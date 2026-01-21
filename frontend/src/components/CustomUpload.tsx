@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { validateCustomQuestions, Question } from "../api/apiClient";
+import { uploadCustomQuestionsToDB, Question } from "../api/apiClient";
 import {
   Upload,
   FileText,
@@ -8,10 +8,13 @@ import {
   FileCode,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface CustomUploadProps {
   onQuestionsLoaded: (questions: Question[]) => void;
   onCancel: () => void;
+  userId: string;
+  onSuccess?: () => void;
 }
 
 // Error Modal Component
@@ -68,11 +71,14 @@ const ErrorModal = ({
 export default function CustomUpload({
   onQuestionsLoaded,
   onCancel,
+  userId,
+  onSuccess,
 }: CustomUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [errorModal, setErrorModal] = useState<{ title: string; message: string; details?: string } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [openAfterUpload, setOpenAfterUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -115,9 +121,22 @@ export default function CustomUpload({
     setErrorModal(null);
 
     try {
-      const response = await validateCustomQuestions(selectedFile);
+      // Use the new endpoint to upload to database first
+      const response = await uploadCustomQuestionsToDB(selectedFile, userId);
+      
       if (response.success && response.questions.length > 0) {
-        onQuestionsLoaded(response.questions);
+        toast.success(`Successfully uploaded ${response.count} questions!`);
+        
+        if (openAfterUpload) {
+          onQuestionsLoaded(response.questions);
+        } else {
+          // Just close the modal via callback or keep it open with success state?
+          // User requested "toast comes with no of questions uploaded"
+          // If not opening, we should probably reset or close. Let's call success callback if provided
+          if (onSuccess) onSuccess();
+          // Reset file selection to allow another upload
+          setSelectedFile(null);
+        }
       } else {
         setErrorModal({
           title: "No Questions Found",
@@ -223,6 +242,23 @@ export default function CustomUpload({
           Domains: software_engineering, management, finance, teaching, sales, general<br />
           Difficulty: easy, medium, hard
         </p>
+      </div>
+
+      {/* Checkbox for opening questions immediately */}
+      <div className="flex items-center gap-2 mt-4 px-1">
+        <input 
+          type="checkbox" 
+          id="open-questions" 
+          checked={openAfterUpload}
+          onChange={(e) => setOpenAfterUpload(e.target.checked)}
+          className="w-4 h-4 rounded border-stone-300 text-primary-500 focus:ring-primary-500"
+        />
+        <label 
+          htmlFor="open-questions" 
+          className="text-sm font-medium text-stone-700 dark:text-surface-200 cursor-pointer select-none"
+        >
+          Start interview with these questions immediately
+        </label>
       </div>
 
       <div className="modal-actions">
