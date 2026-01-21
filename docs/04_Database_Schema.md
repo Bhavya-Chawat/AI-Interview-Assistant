@@ -13,22 +13,34 @@ Table of Contents:
 
 ## 1. Entity Relationship Diagram
 
-```mermaid
-erDiagram
-    USERS ||--o{ INTERVIEW_SESSIONS : "has_many"
-    USERS ||--o{ ATTEMPTS : "has_many"
-    USERS ||--o{ SKILL_PROGRESS : "has_many"
-    USERS ||--o{ QUESTION_HISTORY : "has_many"
-    USERS ||--o{ RESUME_ANALYSES : "has_many"
-
-    INTERVIEW_SESSIONS ||--o{ ATTEMPTS : "contains"
-    INTERVIEW_SESSIONS |o--|| RESUME_ANALYSES : "based_on"
-
-    QUESTIONS ||--o{ ATTEMPTS : "is_answered_in"
-    QUESTIONS ||--o{ QUESTION_HISTORY : "tracked_in"
-
-    ATTEMPTS }|..|{ SKILL_PROGRESS : "updates (trigger)"
-    ATTEMPTS }|..|{ QUESTION_HISTORY : "updates (trigger)"
+```text
+     +-------+         +--------------------+
+     | USERS |◄──────o+| INTERVIEW_SESSIONS |
+     +-------+         +--------------------+
+         ▲                        ▲
+         │                        |
+         │ (1:N)                  │ (1:1)
+         │                        |
+         │         +-----------------+
+         +───────o+| RESUME_ANALYSES |
+         │         +-----------------+
+         │
+         │ (1:N)       +----------+
+         +───────────o+| ATTEMPTS |o-------+
+         │             +----------+        |
+         │                  ▲              | (Updates)
+         │                  |              |
+         │                  | (N:1)        ▼
+         │            +-----------+  +----------------+
+         │            | QUESTIONS |  | SKILL_PROGRESS |
+         │            +-----------+  +----------------+
+         │                  ▲
+         │ (1:N)            |
+         │                  | (Updates)
+         │                  |
+         o+-----------------+
+         | QUESTION_HISTORY |
+         +------------------+
 ```
 
 ---

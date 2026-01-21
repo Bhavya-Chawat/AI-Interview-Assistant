@@ -5,6 +5,11 @@
 
 This document is the definitive technical reference for the AI Interview Assistant. It contains **every** critical detail required to understand, develop, and deploy the system, including full architecture flows, configuration references, API specifications, and internal logic breakdowns.
 
+> **Detailed Reference Documentation**:
+> *   [🗄️ Database Schema Reference](04_Database_Schema.md) - Full SQL, RLS, & Triggers.
+> *   [🔌 Backend API Reference](05_Backend_API.md) - Endpoints, Config, & Models.
+> *   [💻 Frontend Architecture](06_Frontend_Architecture.md) - Component Tree & State.
+
 ---
 
 ## 1. System Architecture & Flows
@@ -57,40 +62,76 @@ The system is a **Modular Monolith** built on FastAPI, designed for high perform
 ### 1.2 Interview Loop Sequence
 This diagram details the exact checkout flow for a single question.
 
-```text
-       USER                 FRONTEND                   BACKEND API                  DATABASE
-        │                       │                           │                           │
-        │ 1. Request Question   │                           │                           │
-        │──────────────────────>│  POST /active_session/next│                           │
-        │                       │──────────────────────────>│                           │
-        │                       │                           │  Fetch User History       │
-        │                       │                           │──────────────────────────>│
-        │                       │                           │<──────────────────────────│
-        │                       │                           │                           │
-        │                       │                           │  [Intelligent Selection]  │
-        │                       │                           │  (Weakness + Domain + JD) │
-        │                       │  Returns Question JSON    │                           │
-        │<──────────────────────│<──────────────────────────│                           │
-        │                       │                           │                           │
-        │ 2. Records Answer     │                           │                           │
-        │──────────────────────>│                           │                           │
-        │                       │  POST /submit_answer      │                           │
-        │                       │  (Audio Blob + Q_ID)      │                           │
-        │                       │──────────────────────────>│                           │
-        │                       │                           │                           │
-        │                       │                           │  ┌─────────────────────┐  │
-        │                       │                           │  │ PROCESSING PIPELINE │  │
-        │                       │                           │  │ 1. Transcribe (Local│  │
-        │                       │                           │  │ 2. ML Scores (Local)│  │
-        │                       │                           │  │ 3. LLM (Cloud)      │  │
-        │                       │                           │  └─────────────────────┘  │
-        │                       │                           │                           │
-        │                       │                           │  INSERT INTO attempts     │
-        │                       │                           │──────────────────────────>│
-        │                       │  Returns Analysis JSON    │  (Triggers Update Stats)  │
-        │ Displays Feedback     │<──────────────────────────│                           │
-        │<──────────────────────│                           │                           │
-```
+### 1.2 "Multimodal Analysis" System Pipeline
+ This diagram visualizes how the system fuses Audio, Video, and Text signals using specific AI models.
+ 
+ ```text
+ ╔═══════════════════════════╗      ╔════════════════════════════════════════════════════════════════════╗
+ ║        USER INPUT         ║      ║                            FRONTEND                                ║
+ ║ [Microphone] + [WebCam]   ║─────►║ • Framework: React + Vite + Typescript                             ║
+ ║                           ║      ║ • Capture: MediaRecorder API (Blob Generation)                     ║
+ ╚═══════════════════════════╝      ║ • Comp. Vision: TensorFlow.js / MediaPipe (Face/Eye Tracking)      ║
+                                    ║ • State: AuthContext (Session Management)                          ║
+                                    ╚════════════════════════════════╦═══════════════════════════════════╝
+                                                                     │
+                                             (HTTPS POST / Multipart Form Data)
+                                                                     ▼
+ ╔═══════════════════════════════════════════════════════════════════▼═══════════════════════════════════╗
+ ║                                           BACKEND API (FastAPI)                                       ║
+ ╠═══════════════════════════════════════════════════════════════════════════════════════════════════════╣
+ ║  1. VALIDATION LAYER                                                                                  ║
+ ║     • Schema: Pydantic (File Size, MIME Type checks)                                                  ║
+ ║     • Auth: Supabase JWT Verification                                                                 ║
+ ║                                                                                                       ║
+ ║  2. MULTIMODAL PROCESSING ENGINE (Parallel Execution)                                                 ║
+ ║     │                                                                                                 ║
+ ║     ├─► [ TRACK A: VISUAL SIGNAL ] ────────────────────────────────────────────────────────┐          ║
+ ║     │     • Input: Eye Contact Metadata from Frontend                                      │          ║
+ ║     │     • Logic: Confidence Heuristic Calculation                                        │          ║
+ ║     │     • Output: `ConfidenceScore` (0-100)                                              │          ║
+ ║     │                                                                                      │          ║
+ ║     ├─► [ TRACK B: AUDIO SIGNAL ] ─────────────────────────────────────────────────────────┤          ║
+ ║     │     • Tool: FFmpeg (Convert to 16kHz WAV)                                            │          ║
+ ║     │     • Logic: Librosa/Scipy (Energy, Pitch Variance, Pause Rate)                      │          ║
+ ║     │     • Output: `VoiceScore` (Monotony vs. Expressiveness)                             │          ║
+ ║     │                                                                                      │          ║
+ ║     └─► [ TRACK C: SEMANTIC SIGNAL ] ──────────────────────────────────────────────────────┤          ║
+ ║           • Model: `faster-whisper` (Int8 Quantized Transformer)                           │          ║
+ ║           • Action: Speech-to-Text Transcription                                           │          ║
+ ║           │                                                                                │          ║
+ ║           ▼ (Text)                                                                         ▼          ║
+ ║         [ NLP ANALYZER ]                                                            [ FUSION LAYER ]  ║
+ ║           • Semantic Match: `sentence-transformers/all-MiniLM-L6-v2` (BERT)   ◄──── • Weighted Sum  ║
+ ║             -> CosineSimilarity(UserAnswer, IdealAnswer)                            • Content: 30%  ║
+ ║           • Grammar: `language-tool-python`                                         • Voice:   15%  ║
+ ║           • Structure: Regex Pattern Matching (STAR Method)                         • Visual:  15%  ║
+ ║           • Output: `ContentScore`, `StructureScore`, `CommunicationScore`          • Delivery:15%  ║
+ ║                                                                                                       ║
+ ║  3. FEEDBACK GENERATION                                                                               ║
+ ║     • Service: Google Gemini 1.5 Flash (via `google-generativeai`)                                    ║
+ ║     • Prompt: Context-Aware System Instruction + Transcript + Scores                                  ║
+ ║     • Output: Structured JSON (Tips, Strengths, Weaknesses)                                           ║
+ ╚═══════════════════════════════════════════════════════════════════╦═══════════════════════════════════╝
+                                                                     │
+                                             (Async Database Transaction)
+                                                                     ▼
+ ╔═══════════════════════════════════════════════════════════════════▼═══════════════════════════════════╗
+ ║                                      DATABASE (Supabase / PostgreSQL)                                 ║
+ ╠═══════════════════════════════════════════════════════════════════════════════════════════════════════╣
+ ║  TABLE: public.attempts                                                                               ║
+ ║  ──────────────────────                                                                               ║
+ ║  + id (UUID)                                                                                          ║
+ ║  + audio_url (Storage/S3)                                                                             ║
+ ║  + transcript (Text)                                                                                  ║
+ ║  + ml_scores (JSONB) <──[Persisted]                                                                   ║
+ ║  + video_metadata (JSONB)                                                                             ║
+ ║                                                                                                       ║
+ ║  [ AUTOMATED TRIGGERS ]                                                                               ║
+ ║  1. `update_user_stats()` ──► Increment Total Attempts, Update Streaks                                ║
+ ║  2. `update_skill_prog()` ──► Recalculate Rolling Averages per Skill                                  ║
+ ║  3. `update_quest_hist()` ──► Track Difficulty & Frequency for Question Engine                        ║
+ ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+ ```
 
 ---
 
